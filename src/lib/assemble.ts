@@ -11,7 +11,7 @@
  * the output by editing markdown rather than by editing this file.
  */
 
-import { QUESTION_IDS, type Answers, type QuestionId } from './questions';
+import { QUESTION_IDS, type Answers, type QuestionId } from './questions.ts';
 
 export interface Stack {
   id: string;
@@ -64,6 +64,27 @@ export function parseStackPrefills(
  */
 const DROP = '<<<agentfile:drop-this-line>>>';
 
+/**
+ * One scan, not two. This matters more than it looks.
+ *
+ * The first version ran two passes: sections first, then a second pass over
+ * the result for the loose tokens. That second pass re-read text the first
+ * pass had just inserted, so a user who typed `{{name}}` inside an answer had
+ * it silently rewritten with their project name. A tool that writes
+ * instruction files must never rewrite somebody's instructions.
+ *
+ * String.replace does not rescan its own insertions, so a single pass is
+ * immune by construction. The optional leading group is what allows it: when
+ * a heading matched, this is a section and an empty value takes the heading
+ * with it; when it did not, this is a loose token and only the token is
+ * replaced.
+ *
+ * Note for anyone editing base.md: the heading has to sit immediately before
+ * its token for the section behaviour to apply. Prose between them turns it
+ * into a loose token, and the heading will then survive an empty answer.
+ */
+const TOKEN = /(?:## (.+)\n+)?\{\{(\w+)\}\}/g;
+
 export function assemble(
   base: string,
   answers: Answers,
@@ -71,22 +92,15 @@ export function assemble(
 ): OutputFiles {
   const name = clean(projectName) || 'Your project';
 
-  // Sections first, so an empty one takes its heading with it.
-  let agents = base.replace(
-    /## (.+)\n+\{\{(\w+)\}\}/g,
-    (_match, heading: string, token: string) => {
-      const value = clean(answers[token as QuestionId] ?? '');
+  const resolve = (token: string): string =>
+    token === 'name' ? name : clean(answers[token as QuestionId] ?? '');
+
+  const agents = base
+    .replace(TOKEN, (_match, heading: string | undefined, token: string) => {
+      const value = resolve(token);
+      if (heading === undefined) return value;
       return value ? `## ${heading}\n\n${value}` : DROP;
-    },
-  );
-
-  // Then the loose tokens that are not inside a section.
-  agents = agents.replace(/\{\{(\w+)\}\}/g, (_match, token: string) => {
-    if (token === 'name') return name;
-    return clean(answers[token as QuestionId] ?? '');
-  });
-
-  agents = agents
+    })
     .split('\n')
     .filter((line) => line.trim() !== DROP)
     .join('\n')

@@ -583,3 +583,91 @@ nobody writes the second version on purpose.
 That is the free course. Phase 6 is the contribution path, and it is not
 started: the output is being read by hand first, before anyone is invited to
 add to it.
+
+---
+
+## Phase 5b · The bug that rewrote the user's own text
+
+Found by the author, running `assemble()` against the real templates by hand
+before phase 6. Not found by the agent, and not found by any of the checks the
+agent had been running, which is the part worth dwelling on.
+
+**Repro.** Type a token into any section answer. Under "what must never be
+done here", write:
+
+```
+Never write {{name}} by hand.
+```
+
+Output:
+
+```
+Never write Orchard by hand.
+```
+
+The user's own words were silently rewritten with their project name.
+
+**Cause.** Assembly ran two passes. The first wrote section values into the
+template. The second ran the loose-token regex across the *result* of the
+first, so it re-read text that had just come from the user.
+
+The detail that makes it hard to spot: **loose answers were fine.** A token
+typed into the "what is this project" answer survived, because `String.replace`
+does not rescan its own insertions. Only section answers broke, because they
+were inserted by the earlier pass and were therefore ordinary input by the time
+the second pass ran. So the bug appeared in four of the eight fields and not the
+other four, with no obvious reason why.
+
+**Fix.** One scan instead of two, with an optional leading heading group:
+
+```
+/(?:## (.+)\n+)?\{\{(\w+)\}\}/g
+```
+
+Heading matched means section behaviour, and an empty value takes the heading
+with it. No heading means a loose token, and only the token is replaced.
+Because it is a single `replace`, nothing user-supplied is ever re-read. The
+fix is immune by construction rather than by care.
+
+**Tests added.** `src/lib/assemble.test.ts`, eleven of them, using `node:test`
+and `node:assert`. Both ship with Node, so §6 is satisfied: no test runner
+dependency, nothing new in `package.json` for a beginner to ask about.
+
+The regression test was then proved rather than trusted. The two-pass version
+was put back and the suite run again:
+
+```
+✖ a token typed inside a section answer is left alone
+✔ a token typed inside a loose answer is left alone
+...
+ℹ pass 10   ℹ fail 1
+```
+
+Exactly one failure, and it is the right one. The second line is the diagnosis
+made visible: with the bug present, the loose case still passes.
+
+**One toolchain change to make tests possible.** Node's ESM resolver needs
+explicit file extensions, and the source used bundler-style extensionless
+imports. Imports inside `src/lib` now carry `.ts`, with
+`allowImportingTsExtensions` in tsconfig. `next build` still passes. No
+dependency.
+
+### Why this one matters more than the others
+
+Every other mistake in these notes announced itself. A build failed, a linter
+warned, a button did nothing. This one produced a plausible file, every time,
+and quietly changed what the user wrote.
+
+The failure mode is worse than the bug. **A user who saw `{{name}}` become
+`Orchard` in their own sentence would assume they had typed it wrong.** They
+would fix it by hand and never report it. A tool whose entire job is to produce
+instruction files, silently rewriting somebody's instructions, is the one
+category of bug this project cannot afford, and it is the category least likely
+to be reported.
+
+*Worth showing on camera:* yes, and it should be the closing lesson of the
+build. The agent shipped five phases, tested the constraint, tested the
+registry failure, tested the assembly against all three stacks, and still
+missed this. It was caught by a person opening the tool and typing something
+awkward into it. Automated checks find what you thought to check for. Reading
+the output by hand finds the rest.
