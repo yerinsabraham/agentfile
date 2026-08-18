@@ -795,21 +795,46 @@ twice in a row leaves the class unchanged, so the animation never replays. The
 fix is a counter per section, used in the React key, so the span remounts and
 the animation restarts.
 
-**The first version set state inside an effect, and the linter refused it:**
+**The first version set state inside an effect, and the linter refused it.**
+The error, verbatim:
 
 ```
-error  Calling setState synchronously within an effect can trigger
-       cascading renders
+src/app/Builder.tsx
+  166:5  error  Error: Calling setState synchronously within an effect can
+                trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems
+such as manually updating the DOM, state management libraries, or other
+platform APIs. In general, the body of an effect should do one or both of the
+following:
+* Update external systems with the latest state from React.
 ```
 
-That is not style advice. Setting state in an effect schedules a second render
-after paint, so the tint would have arrived a frame late, on the thing whose
-entire job is to feel immediate. Comparing against the previous value during
-render is the documented pattern: React discards the first pass and re-renders
-before anything reaches the screen.
+Read that as a style rule and you delete the effect, or you add a guard, or
+you disable the rule, and you move on. It is not a style rule. It is
+describing a defect you would have seen on screen.
 
-*Worth showing on camera:* yes. A lint error that reads like a code-style
-nitpick was actually describing a visible defect in the feature being built.
+**Why, precisely.** An effect runs *after* React has committed the render and
+the browser has painted. Setting state there schedules a second render, which
+paints again. So the sequence was: the answer changes, the output text updates
+and paints, and only then does the tint appear.
+
+One frame late. On the one feature in the entire application whose only job is
+to make a change feel immediate. The tint would have arrived after the thing
+it was meant to point at, which is not a highlight, it is a delayed flicker.
+
+**The fix.** Compare against the previous value during render instead. This is
+the documented React pattern for adjusting state when an input changes: React
+throws away the first pass and re-renders before anything reaches the screen,
+so the text and its tint land in the same paint.
+
+*Worth showing on camera:* yes, and this is the one to build a lesson around.
+The linter emitted something that reads like a code-style nitpick. It was
+actually a precise description of a visible defect in the exact feature being
+written, in a codebase where nothing was broken, no test failed and the build
+passed. Nobody would have found it by looking at the screen either, because a
+one frame delay is felt rather than seen. The tool knew something the author
+did not, and it said so in language easy to dismiss.
 
 ### One false positive, suppressed with its reason
 
@@ -828,3 +853,51 @@ lint                : clean
 tests               : 11 pass
 build               : succeeds
 ```
+
+---
+
+## Design pass, part two · Taking the agent's own suggestion
+
+**What happened.** The agent shipped the fonts as a stylesheet link because
+that is what was asked for, then noted in its report that `next/font/google`
+would be better and gave one argument against: an explicit `<link>` teaches a
+beginner more than build-time magic. The author took the suggestion and
+rejected the argument.
+
+**The four reasons, and which one settled it.**
+
+1. It deletes the third-party request that §3 [r5] had to record as a cost. **A
+   note explaining an accepted downside is worse than not having the
+   downside.**
+2. It removes the `no-page-custom-font` suppression entirely. A codebase with
+   one fewer disabled lint rule is a better teaching artifact than one with a
+   well-commented suppression.
+3. No npm package. It is built into Next, so §1 is untouched.
+4. It self-hosts at build time, which works under `output: 'export'` because
+   the files are emitted into the build.
+
+Number two is the one that settled it, and it is the direct answer to the
+agent's teaching argument. Someone reading `next/font/google` learns the
+current correct pattern. Someone reading the `<link>` learns a pattern they
+would later have to unlearn, **and** a disabled lint rule explaining why a
+warning does not apply to them. That is two things to unlearn, not zero.
+
+**Verified after the change.**
+
+```
+references to fonts.googleapis.com or fonts.gstatic.com : 0
+woff2 files emitted into out/                           : 9
+@font-face src                                          : ../media/...
+dependencies                                            : next, react, react-dom
+eslint-disable in layout.tsx                            : 0
+```
+
+One cost remains and is recorded: the build now needs network access the first
+time, to fetch the fonts.
+
+*Worth showing on camera:* yes, briefly, as a pattern rather than a font
+decision. The agent had the better option and said so, then argued itself out
+of it on a plausible-sounding basis. The useful habit is not "the agent
+suggests things", it is reading the suggestion and its own counter-argument as
+two separate claims, because the counter-argument is not automatically the
+stronger one just because it came last.

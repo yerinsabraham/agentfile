@@ -21,9 +21,13 @@
   --line: #e5e7eb;
   --line-strong: #d1d5db;
 
-  --serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  /* Set by next/font/google in layout.tsx, which self-hosts the files at
+     build time. The fallbacks matter: display=swap means text renders in
+     them for the moment before the webfont is ready. */
+  --serif: var(--font-serif), Georgia, 'Times New Roman', serif;
   --sans:
-    'Inter', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
+    var(--font-sans), system-ui, -apple-system, 'Segoe UI', Helvetica, Arial,
+    sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
