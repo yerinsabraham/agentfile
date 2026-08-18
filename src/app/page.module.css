@@ -48,13 +48,44 @@
   min-width: 0;
 }
 
+/* The preview stays put while the form scrolls, so you can see the file
+   change as you type without chasing it. */
+@media (min-width: 900px) {
+  .preview {
+    position: sticky;
+    top: 0;
+    align-self: start;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+}
+
+.previewInner {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.badge {
+  margin-left: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 7px;
+  vertical-align: middle;
+}
+
 .paneLabel {
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
-  margin: 0 0 16px;
+  margin: 0;
 }
 
 .field {
@@ -104,6 +135,7 @@
 
 .output {
   background: var(--panel);
+  min-height: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 16px 18px;

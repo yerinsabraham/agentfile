@@ -1,103 +1,54 @@
+'use client';
+
+import { useMemo, useState } from 'react';
+
+import {
+  NEXTJS,
+  STACKS,
+  assemble,
+  prefillAnswers,
+  type Stack,
+} from '@/lib/assemble';
+import { EMPTY_ANSWERS, QUESTIONS, type Answers } from '@/lib/questions';
+
 import styles from './page.module.css';
 
 /**
- * Phase 1 skeleton. PROJECT.md §5.
+ * Phase 2. PROJECT.md §5.
  *
- * The output below is hard coded on purpose. Phase 2 adds questions.ts and
- * assemble.ts and makes this update as you type; phase 3 moves the template
- * text to disk. Nothing here is wired yet, so the fields are disabled rather
- * than pretending to work.
+ * This is now a client component, which §4 always said it would be. Phase 1
+ * left it as a server component on purpose, because a 'use client' holding no
+ * state is noise. It holds state now, so it earns the directive.
  *
- * §4 describes this file as a client component. It is not one yet, because
- * there is no state in phase 1 and a 'use client' that holds nothing would be
- * noise. It becomes one in phase 2, when the preview starts responding.
+ * One hard coded stack, per §5. Phase 3 moves the templates to disk and phase
+ * 5 adds copy and download.
  */
-
-/** The question set, PROJECT.md §2. Rendered here, answered in phase 2. */
-const QUESTIONS = [
-  {
-    id: 'what',
-    label: 'What is this project, in two sentences?',
-    hint: 'Without this the agent infers purpose from file names and gets it wrong.',
-  },
-  {
-    id: 'never',
-    label: 'What must never be done here?',
-    hint: 'Phrased as prohibitions. "Prefer X" gets negotiated away, "never X" does not.',
-  },
-  {
-    id: 'deliberate',
-    label: 'What looks wrong but is deliberate?',
-    hint: 'Every codebase has decisions that read as bugs. Without this the agent helpfully undoes them.',
-  },
-  {
-    id: 'commands',
-    label: 'What commands run, test and build it?',
-    hint: 'Stops the agent inventing a script that does not exist.',
-  },
-  {
-    id: 'docs',
-    label: 'Where does the real reasoning live?',
-    hint: 'Points at the docs, so the agent reads them instead of guessing.',
-  },
-  {
-    id: 'ask',
-    label: 'What should it ask about rather than assume?',
-    hint: 'Names the areas where a wrong guess that compiles is expensive.',
-  },
-  {
-    id: 'style',
-    label: 'Any house style rules?',
-    hint: 'Copy rules, comment style, naming. Small, and constantly violated without it.',
-  },
-] as const;
-
-/** Hard coded for phase 1. Replaced by assemble.ts in phase 2. */
-const SAMPLE_OUTPUT = `# Orchard
-
-A scheduling tool for smallholder farms. Next.js App Router, TypeScript,
-Postgres. Works offline in the field and syncs when it reconnects.
-
-## Never
-
-- Never call the model API from the browser. The key lives on the server.
-- Never write to the schedule table without going through lib/schedule.ts.
-- Never add a migration without a matching rollback.
-
-## Looks wrong, is deliberate
-
-- Dates are stored as plain strings, not timestamps. Field work is planned by
-  day, and timezone conversion was moving tasks across midnight.
-- The sync queue retries forever and never drops a write. Losing a day of
-  field notes is worse than a queue that grows.
-
-## Commands
-
-npm run dev
-npm run test
-npm run build
-
-## Where the reasoning lives
-
-docs/ARCHITECTURE.md holds the decisions and what was rejected.
-
-## Ask before assuming
-
-Anything touching payouts, and anything that changes what a labourer sees.
-
-## Style
-
-Sentence case for headings. No abbreviations in identifiers.
-`;
-
 export default function Page() {
+  const [stack] = useState<Stack>(NEXTJS);
+  const [name, setName] = useState('');
+  const [answers, setAnswers] = useState<Answers>(() =>
+    prefillAnswers(NEXTJS, EMPTY_ANSWERS),
+  );
+
+  // Recomputed on every keystroke. There is no server to ask, so this is just
+  // string work on data already in memory. §2 [r2].
+  const files = useMemo(
+    () => assemble(answers, name),
+    [answers, name],
+  );
+
+  function setAnswer(id: keyof Answers, value: string) {
+    setAnswers((prev) => ({ ...prev, [id]: value }));
+  }
+
   return (
     <div className={styles.page}>
       <header className={styles.header}>
         <p className={styles.wordmark}>Agentfile</p>
         <p className={styles.tagline}>
           Answer a few questions about your project and get the context file
-          your AI coding agent reads before it touches your code.
+          your AI coding agent reads before it touches your code. Nothing is
+          sent anywhere. It is all assembled in your browser.
         </p>
       </header>
 
@@ -106,32 +57,63 @@ export default function Page() {
           <p className={styles.paneLabel}>Your project</p>
 
           <div className={styles.field}>
+            <label htmlFor="name">Project name</label>
+            <input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Orchard"
+            />
+          </div>
+
+          <div className={styles.field}>
             <label htmlFor="stack">Stack</label>
             <span className={styles.hint}>
-              Prefills the commands and style answers. More stacks arrive in
+              Fills in the commands and style answers. More stacks arrive in
               phase 4.
             </span>
-            <select id="stack" disabled defaultValue="nextjs">
-              <option value="nextjs">Next.js</option>
+            <select id="stack" value={stack.id} disabled>
+              {STACKS.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
             </select>
           </div>
 
           {QUESTIONS.map((q) => (
             <div key={q.id} className={styles.field}>
-              <label htmlFor={q.id}>{q.label}</label>
+              <label htmlFor={q.id}>
+                {q.label}
+                {q.prefilled && (
+                  <span className={styles.badge}>filled from stack</span>
+                )}
+              </label>
               <span className={styles.hint}>{q.hint}</span>
-              <textarea id={q.id} disabled placeholder="Phase 2" />
+              <textarea
+                id={q.id}
+                rows={q.rows}
+                value={answers[q.id]}
+                placeholder={q.placeholder}
+                onChange={(e) => setAnswer(q.id, e.target.value)}
+              />
             </div>
           ))}
         </section>
 
         <section className={styles.preview}>
-          <p className={styles.paneLabel}>AGENTS.md</p>
-          <pre className={styles.output}>{SAMPLE_OUTPUT}</pre>
-          <p className={styles.note}>
-            Sample output, hard coded for now. Phase 2 builds this from your
-            answers as you type.
-          </p>
+          <div className={styles.previewInner}>
+            <p className={styles.paneLabel}>AGENTS.md</p>
+            <pre className={styles.output}>{files.agents}</pre>
+
+            <p className={styles.paneLabel}>CLAUDE.md</p>
+            <pre className={styles.output}>{files.claude}</pre>
+            <p className={styles.note}>
+              Two files, not one copied twice. AGENTS.md holds everything and
+              CLAUDE.md points at it, so editing one cannot leave the other
+              stale.
+            </p>
+          </div>
         </section>
       </div>
     </div>
