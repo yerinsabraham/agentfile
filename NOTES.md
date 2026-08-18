@@ -671,3 +671,90 @@ registry failure, tested the assembly against all three stacks, and still
 missed this. It was caught by a person opening the tool and typing something
 awkward into it. Automated checks find what you thought to check for. Reading
 the output by hand finds the rest.
+
+---
+
+## Phase 6 · Contribution path
+
+**What was asked.** `CONTRIBUTING.md` explaining how to add a stack, and a
+pull request template. The phase that turns this from a demo into something
+other people can add to.
+
+**What was produced.** `CONTRIBUTING.md`, a pull request template, and a real
+`README.md`, since the repo was still carrying the one `create-next-app`
+wrote and that is the first thing a contributor sees.
+
+### The instructions were tested by following them
+
+Documentation nobody has followed is usually wrong, so the contribution path
+was walked exactly as written: create `templates/stacks/ruby-rails.md`, fill
+the four sections, add two lines to `templates/index.ts`, build.
+
+It worked first time, with all four sections parsed:
+
+```
+prefills parsed: what, commands, rerun, style
+
+# Demo
+
+Ruby on Rails, Postgres, Hotwire for the front end.
+
+## Commands
+bin/rails server
+bin/rails test
+bin/rubocop
+
+## Re-run after certain changes
+After changing a model, run bin/rails db:migrate before anything will work.
+After changing the Gemfile, run bundle install.
+
+## Style
+Rubocop decides formatting, so do not argue with it.
+...
+```
+
+The test stack was then deleted. Phase 6 is the contribution path, not a
+fourth stack, and §5 says three.
+
+### One small fix for contributors
+
+`npm test` printed a Node warning on every run about the package having no
+module type. Harmless, and exactly the kind of unexplained noise that makes a
+first-time contributor think they have broken something. `"type": "module"`
+in package.json silences it. Not a dependency, so §6 is satisfied. Build,
+tests and lint all still pass.
+
+### What CONTRIBUTING.md leans on hardest
+
+The `rerun` section, because it is the one people will get wrong. The
+instruction is explicit that it is **an obligation with a trigger, not a
+command**:
+
+> After editing anything annotated with freezed, run the generator before the
+> project will compile.
+
+rather than
+
+> dart run build_runner build
+
+with the reason attached: an agent reads a bare command as optional tooling and
+a trigger as a rule. That distinction is the entire reason question 8 exists,
+and it came out of building the Flutter template in phase 4.
+
+There is also a question in the pull request template asking what the
+contributor found hard to answer, framed as a likely gap in the question set
+rather than a gap in their knowledge. The question set came from one working
+file and phase 4 proved it was incomplete, so the people using it on stacks
+nobody here has shipped are the best source of the next missing question.
+
+### Phases 1 to 6 are done
+
+§7's done criteria:
+
+- Public URL, free tier, no environment variables. **Yes.**
+- Public repo, `CONTRIBUTING.md`, three stack templates. **Yes.**
+- Somebody who finished lesson 5 adds a fourth stack in under thirty minutes
+  without cloning. **Untested with a real person**, which is the only way it
+  can be tested. The mechanism works and the instructions were followed once,
+  by the agent that wrote them, which is the weakest possible confirmation.
+  The first outside pull request is the real check.
