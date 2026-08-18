@@ -495,3 +495,91 @@ commands.
 revisions ago. The author chose the awkward third stack on purpose, against the
 agent's recommendation, precisely so that a gap like this would show up while
 the project was four files big instead of forty.
+
+---
+
+## Phase 4b · The eighth question
+
+Not a phase. A plan revision the code had to catch up to, done before phase 5
+so that phase 5 was not built on a stale question set.
+
+**What happened.** The Flutter strain reported at the end of phase 4 was
+accepted, and §2 gained an eighth question marked [r4]:
+
+> What has to be re-run after certain changes, and what triggers it?
+
+**The evidence was stronger than the agent's.** The agent argued from Flutter:
+`build_runner` is an obligation with a trigger, not a command, and question 4
+gave it nowhere to live. The author had better evidence, from
+`creovine-academy/CLAUDE.md`, the working file the entire question set was
+taken from. It carries three rules of exactly this shape:
+
+> "When you add a store method, write both."
+> "Before adding a credential to Vercel, write it to /academy too."
+> "Before building a feature, read how an established project solved it first."
+
+Seven questions could not have produced any of those. So the gap was in the
+source file all along, and Flutter did not create it, it only made it
+impossible to ignore.
+
+*Worth showing on camera:* yes, and it is the sharper version of the phase 4
+lesson. The agent found a real hole by building the awkward third stack. The
+author then found the same hole sitting in a file that had been in daily use
+for months, unnoticed. Deriving a question set from something real is what made
+it good; it did not make it complete.
+
+**What changed in the code.** `rerun` added to `questions.ts`. A section in
+`base.md`, placed directly after Commands so the contrast is unavoidable when
+reading the output. `build_runner` removed from Flutter's command list and
+moved into the new section with its trigger condition attached. Next.js and
+FastAPI have no answer, so the section is omitted for them, which the existing
+empty-section rule handled with no new code.
+
+Verified across all three:
+
+```
+nextjs          rerun: no    section shown: no (omitted, correct)
+python-fastapi  rerun: no    section shown: no (omitted, correct)
+flutter         rerun: yes   section shown: yes
+build_runner still in Commands: no, for all three
+```
+
+---
+
+## Phase 5 · Copy and download
+
+**What was asked.** Copy and download, both files. Stop there.
+
+**What was produced.** A Copy and a Download button per file, on both AGENTS.md
+and CLAUDE.md.
+
+**No dependency.** A `Blob` plus an anchor with a `download` attribute, and
+`navigator.clipboard.writeText`. A file-saver library would have been one more
+line in `package.json` to explain, for something the platform already does. §1
+says a beginner should recognise every line in there.
+
+### What was nearly wrong
+
+**Copy can fail, and the first version would have lied about it.** Clipboard
+access is refused in some browsers and in any insecure context. The obvious
+implementation sets "Copied" on click and never checks. That shows success for
+something that did not happen, which is the same class of bug as the silent
+button in the Simbai notes: a failure the interface hides.
+
+The `writeText` call is awaited in a try block, and a refusal shows a line
+telling the user to select the text or use Download instead.
+
+**A small honesty fix in the form.** The "filled from stack" badge was on every
+question marked prefillable. Question 8 is prefillable but only Flutter answers
+it, so on Next.js and FastAPI the badge was claiming a prefill that did not
+exist. It now shows only when the selected stack actually supplied something.
+
+*Worth showing on camera:* the copy failure, briefly. It is a two line
+difference between an interface that tells the truth and one that does not, and
+nobody writes the second version on purpose.
+
+### Phases 1 to 5 are done
+
+That is the free course. Phase 6 is the contribution path, and it is not
+started: the output is being read by hand first, before anyone is invited to
+add to it.

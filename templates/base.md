@@ -14,6 +14,10 @@
 
 {{commands}}
 
+## Re-run after certain changes
+
+{{rerun}}
+
 ## Where the reasoning lives
 
 {{docs}}

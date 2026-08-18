@@ -17,9 +17,17 @@ flutter pub get
 flutter run
 flutter test
 flutter analyze
-dart run build_runner build --delete-conflicting-outputs
 flutter build apk --release
 flutter build ipa --release
+
+## rerun
+
+After editing anything annotated with freezed, json_serializable or riverpod,
+run the generator before the project will compile:
+
+dart run build_runner build --delete-conflicting-outputs
+
+After changing pubspec.yaml, run flutter pub get.
 
 ## style
 

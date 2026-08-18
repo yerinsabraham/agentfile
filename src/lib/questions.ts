@@ -5,8 +5,9 @@
  * why every question has a real mistake behind it rather than a guess about
  * what might be useful.
  *
- * Questions 1, 4 and 7 are prefilled from the chosen stack. 2, 3, 5 and 6 are
- * the user's, because nobody else can know them.
+ * Questions 1, 4, 7 and 8 are prefilled from the chosen stack where the stack
+ * has an answer. 2, 3, 5 and 6 are the user's, because nobody else can know
+ * them.
  */
 
 export const QUESTION_IDS = [
@@ -17,6 +18,7 @@ export const QUESTION_IDS = [
   'docs',
   'ask',
   'style',
+  'rerun',
 ] as const;
 
 export type QuestionId = (typeof QUESTION_IDS)[number];
@@ -89,6 +91,16 @@ export const QUESTIONS: readonly Question[] = [
     hint: 'Names the areas where a wrong guess that compiles is expensive.',
     placeholder: 'Anything touching payments, and anything that changes what a user sees.',
     prefilled: false,
+    rows: 3,
+  },
+  {
+    id: 'rerun',
+    heading: 'Re-run after certain changes',
+    label: 'What has to be re-run after certain changes, and what triggers it?',
+    hint: 'Codegen, migrations and lockfiles are obligations with a trigger, not commands you run when you feel like it.',
+    placeholder:
+      'After editing a model with an annotation, run the code generator before anything will compile.',
+    prefilled: true,
     rows: 3,
   },
   {

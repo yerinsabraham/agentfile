@@ -21,7 +21,7 @@ import styles from './page.module.css';
  * Switching stack replaces the stack-owned answers and leaves the user's
  * alone. Questions 2, 3, 5 and 6 are things only the author can know, so
  * losing them because someone clicked a dropdown would be the worst bug in
- * the app. Questions 1, 4 and 7 belong to the stack and are expected to
+ * the app. Questions 1, 4, 7 and 8 belong to the stack and are expected to
  * change with it, including when the user has edited them: a "commands"
  * answer left over from Next.js is wrong on Flutter, not worth preserving.
  */
@@ -32,6 +32,57 @@ function applyStack(stack: Stack, answers: Answers): Answers {
     next[q.id] = stack.prefill[q.id] ?? '';
   }
   return next;
+}
+
+/**
+ * §5 phase 5. Both files, copy and download.
+ *
+ * A Blob and an anchor, no dependency. §1 says a beginner should recognise
+ * every line of package.json, and a file-saver library would be one more line
+ * to explain for something the platform already does.
+ */
+function downloadFile(filename: string, content: string) {
+  const url = URL.createObjectURL(
+    new Blob([content], { type: 'text/markdown;charset=utf-8' }),
+  );
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function FileBlock({
+  filename,
+  content,
+  copied,
+  onCopy,
+}: {
+  filename: string;
+  content: string;
+  copied: boolean;
+  onCopy: () => void;
+}) {
+  return (
+    <div className={styles.fileBlock}>
+      <div className={styles.fileHead}>
+        <p className={styles.paneLabel}>{filename}</p>
+        <div className={styles.actions}>
+          <button type="button" onClick={onCopy} className={styles.action}>
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+          <button
+            type="button"
+            onClick={() => downloadFile(filename, content)}
+            className={styles.action}
+          >
+            Download
+          </button>
+        </div>
+      </div>
+      <pre className={styles.output}>{content}</pre>
+    </div>
+  );
 }
 
 export default function Builder({
@@ -46,6 +97,7 @@ export default function Builder({
   const [answers, setAnswers] = useState<Answers>(() =>
     applyStack(stacks[0], EMPTY_ANSWERS),
   );
+  const [copied, setCopied] = useState<string | null>(null);
 
   function chooseStack(id: string) {
     const next = stacks.find((s) => s.id === id);
@@ -59,6 +111,19 @@ export default function Builder({
     () => assemble(base, answers, name),
     [base, answers, name],
   );
+
+  async function copy(filename: string, content: string) {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopied(filename);
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      // Clipboard access can be refused. Say so rather than showing "Copied"
+      // for something that did not copy.
+      setCopied(`${filename}:failed`);
+      setTimeout(() => setCopied(null), 3000);
+    }
+  }
 
   return (
     <div className={styles.columns}>
@@ -78,8 +143,8 @@ export default function Builder({
         <div className={styles.field}>
           <label htmlFor="stack">Stack</label>
           <span className={styles.hint}>
-            Fills in the project, commands and style answers. Switching stack
-            replaces those three and leaves your own answers alone.
+            Fills in the answers a stack can know. Switching stack replaces
+            those and leaves your own answers alone.
           </span>
           <select
             id="stack"
@@ -98,7 +163,10 @@ export default function Builder({
           <div key={q.id} className={styles.field}>
             <label htmlFor={q.id}>
               {q.label}
-              {q.prefilled && (
+              {/* Only badge it when this stack actually supplied something.
+                  Question 8 is prefilled for Flutter and empty for the other
+                  two, and claiming otherwise would be a small lie. */}
+              {stack.prefill[q.id] && (
                 <span className={styles.badge}>filled from stack</span>
               )}
             </label>
@@ -118,15 +186,28 @@ export default function Builder({
 
       <section className={styles.preview}>
         <div className={styles.previewInner}>
-          <p className={styles.paneLabel}>AGENTS.md</p>
-          <pre className={styles.output}>{files.agents}</pre>
-
-          <p className={styles.paneLabel}>CLAUDE.md</p>
-          <pre className={styles.output}>{files.claude}</pre>
+          <FileBlock
+            filename="AGENTS.md"
+            content={files.agents}
+            copied={copied === 'AGENTS.md'}
+            onCopy={() => copy('AGENTS.md', files.agents)}
+          />
+          <FileBlock
+            filename="CLAUDE.md"
+            content={files.claude}
+            copied={copied === 'CLAUDE.md'}
+            onCopy={() => copy('CLAUDE.md', files.claude)}
+          />
+          {copied?.endsWith(':failed') && (
+            <p className={styles.note}>
+              Your browser refused clipboard access. Select the text and copy
+              it, or use Download.
+            </p>
+          )}
           <p className={styles.note}>
             Two files, not one copied twice. AGENTS.md holds everything and
             CLAUDE.md points at it, so editing one cannot leave the other
-            stale.
+            stale. Put both in the root of your repo.
           </p>
         </div>
       </section>

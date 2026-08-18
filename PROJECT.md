@@ -80,8 +80,35 @@ mistake.
 | 5 | Where does the real reasoning live? | Points at the docs, so the agent reads them instead of guessing. |
 | 6 | What should it ask about rather than assume? | Names the areas where a wrong guess that compiles is expensive. |
 | 7 | Any house style rules? | Copy rules, comment style, naming. Small, constantly violated without it. |
+| 8 | **[r4]** What has to be re-run after certain changes, and what triggers it? | Codegen, migrations and lockfiles are obligations with a trigger, not commands you run when you feel like it. Question 4 lists commands, and an agent reads a list as optional tooling. |
 
-Questions 1, 4 and 7 are prefilled per stack. 2, 3, 5 and 6 are the user's.
+Questions 1, 4, 7 and 8 are prefilled per stack where the stack has an answer.
+2, 3, 5 and 6 are the user's.
+
+### [r4] Why there is an eighth question
+
+Flutter was chosen as stack three to test whether the shape survives leaving
+the web. It did, mechanically: all three stacks parse to the same prefills. But
+`dart run build_runner build` is not a run, a test or a build. It is a step
+that must happen after editing certain files and before anything compiles, and
+question 4 gave it nowhere to live, so it got smuggled into a flat command list
+where it reads as optional.
+
+This is not a Flutter problem. `prisma generate`, `go generate` and GraphQL
+codegen have the same shape, so the hole was open on the Next.js stack too.
+Nobody saw it because a Next.js project can exist without Prisma and a Flutter
+project cannot exist without build_runner.
+
+The proof that the gap is general: `creovine-academy/CLAUDE.md`, the working
+file this whole question set was taken from, carries three rules of exactly
+this shape. "When you add a store method, write both." "Before adding a
+credential to Vercel, write it to /academy too." "Before building a feature,
+read how an established project solved it first." Seven questions could not
+have produced any of them.
+
+Rejected alternatives: widening question 4, which would turn one clear question
+into two muddled ones; and a freeform per-stack section, which is a place to
+put anything and therefore a place where nothing is asked for on purpose.
 
 ### [r2] One file or two
 
