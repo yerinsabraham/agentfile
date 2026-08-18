@@ -15,12 +15,23 @@ import styles from './page.module.css';
  * nothing on this page needs a server.
  */
 
-function seed(stack: Stack): Answers {
-  const answers = { ...EMPTY_ANSWERS };
-  for (const [id, value] of Object.entries(stack.prefill)) {
-    answers[id as keyof Answers] = value;
+/**
+ * Applies a stack's prefills over a set of answers.
+ *
+ * Switching stack replaces the stack-owned answers and leaves the user's
+ * alone. Questions 2, 3, 5 and 6 are things only the author can know, so
+ * losing them because someone clicked a dropdown would be the worst bug in
+ * the app. Questions 1, 4 and 7 belong to the stack and are expected to
+ * change with it, including when the user has edited them: a "commands"
+ * answer left over from Next.js is wrong on Flutter, not worth preserving.
+ */
+function applyStack(stack: Stack, answers: Answers): Answers {
+  const next = { ...answers };
+  for (const q of QUESTIONS) {
+    if (!q.prefilled) continue;
+    next[q.id] = stack.prefill[q.id] ?? '';
   }
-  return answers;
+  return next;
 }
 
 export default function Builder({
@@ -30,9 +41,18 @@ export default function Builder({
   base: string;
   stacks: Stack[];
 }) {
-  const [stack] = useState<Stack>(stacks[0]);
+  const [stack, setStack] = useState<Stack>(stacks[0]);
   const [name, setName] = useState('');
-  const [answers, setAnswers] = useState<Answers>(() => seed(stacks[0]));
+  const [answers, setAnswers] = useState<Answers>(() =>
+    applyStack(stacks[0], EMPTY_ANSWERS),
+  );
+
+  function chooseStack(id: string) {
+    const next = stacks.find((s) => s.id === id);
+    if (!next) return;
+    setStack(next);
+    setAnswers((prev) => applyStack(next, prev));
+  }
 
   // Recomputed on every keystroke. There is no server to ask.
   const files = useMemo(
@@ -58,10 +78,14 @@ export default function Builder({
         <div className={styles.field}>
           <label htmlFor="stack">Stack</label>
           <span className={styles.hint}>
-            Fills in the commands and style answers. More stacks arrive in
-            phase 4.
+            Fills in the project, commands and style answers. Switching stack
+            replaces those three and leaves your own answers alone.
           </span>
-          <select id="stack" value={stack.id} disabled>
+          <select
+            id="stack"
+            value={stack.id}
+            onChange={(e) => chooseStack(e.target.value)}
+          >
             {stacks.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name}

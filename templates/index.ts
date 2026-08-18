@@ -53,9 +53,13 @@ export const BASE: string = load('base.md');
 /**
  * Every stack, listed once. Adding a stack is two lines here plus one
  * markdown file, which is the whole contribution story in §1.
- *
- * Phase 4 adds python-fastapi and flutter.
  */
 export const STACK_TEMPLATES: readonly StackTemplate[] = [
   { id: 'nextjs', name: 'Next.js', source: load('stacks', 'nextjs.md') },
+  {
+    id: 'python-fastapi',
+    name: 'Python FastAPI',
+    source: load('stacks', 'python-fastapi.md'),
+  },
+  { id: 'flutter', name: 'Flutter', source: load('stacks', 'flutter.md') },
 ];

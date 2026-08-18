@@ -410,3 +410,88 @@ exactly questions 1, 4 and 7, as §2 says.
 *Worth showing on camera:* yes, briefly. A grep on built output is a weak test,
 and it produced a false alarm that took a real check to clear. Test the function,
 not the HTML.
+
+---
+
+## Phase 4 · Three stacks
+
+**What was asked.** Next.js, Python FastAPI and Flutter. Flutter last, and a
+straight answer on whether it strains the template shape, because §3 says
+finding that out early is worth a lesson.
+
+**What was produced.** Two new stack templates, both registered, and the stack
+selector enabled. Switching stack replaces the three stack-owned answers and
+leaves the user's four alone, because losing an answer only the author could
+have written, because somebody clicked a dropdown, would be the worst bug in
+the app.
+
+### Does Flutter strain the shape? Mechanically no, structurally yes
+
+Mechanically it fits perfectly. All three stacks parse to exactly the same
+three prefills, nothing missing, no unexpected sections:
+
+```
+nextjs          prefills: what, commands, style   command lines: 3
+python-fastapi  prefills: what, commands, style   command lines: 4
+flutter         prefills: what, commands, style   command lines: 7
+```
+
+The strain is in question 4, and it is real.
+
+**Question 4 asks "what commands run, test and build it". That is three verbs,
+and it is web-service shaped.** Flutter's answer has to carry seven lines, and
+only three of them are a run, a test or a build:
+
+```
+flutter pub get                                            dependencies
+flutter run                                                run
+flutter test                                               test
+flutter analyze                                            lint
+dart run build_runner build --delete-conflicting-outputs   codegen
+flutter build apk --release                                build, Android
+flutter build ipa --release                                build, iOS
+```
+
+Two separate problems in that list.
+
+**One, "build" is not a single command.** Next.js and FastAPI have one build or
+none. Flutter has one per platform. The question's singular framing does not
+fit, though this is mild: a list is still a list.
+
+**Two, and this is the serious one, codegen has nowhere to live.**
+`build_runner` is not a run, a test, or a build. It is a step that must happen
+*after editing certain files and before anything will compile at all*. Edit a
+freezed model, skip it, and nothing works. That is exactly the class of thing
+an AGENTS.md exists to prevent, and question 4 gives it no home, so it gets
+smuggled into a flat list of commands where an agent reads it as optional
+tooling rather than as a mandatory step with a trigger condition.
+
+### The finding generalises, which is why it matters
+
+This is not a Flutter problem. Flutter only surfaced it because codegen is
+unavoidable there. The same hole is open for `go generate`, for GraphQL
+codegen, and for `prisma generate`, which means it is open on the **Next.js**
+stack too. Nobody noticed, because a Next.js project can exist without Prisma
+and a Flutter project cannot exist without build_runner.
+
+So §3's bet paid off exactly as written. Slot three was chosen to prove the
+shape survives leaving the web, and it did survive, while exposing a gap that
+was always there and that the two web stacks were quietly hiding.
+
+### What was not done about it
+
+Nothing. §2 is the question set and it is structural, so §6 applies: say so and
+stop. The gap is reported, not patched.
+
+**The suggestion, for the author to accept or reject.** An eighth question:
+*"What has to be re-run after certain edits, and what triggers it?"* It is the
+smallest change that closes the hole, it is not Flutter-specific, and it covers
+codegen, database migrations and lockfile regeneration in one. The alternatives
+are to widen question 4's wording, to let stacks contribute an extra freeform
+section, or to leave it and accept that contributors will cram it into
+commands.
+
+*Worth showing on camera:* yes, this is the payoff for a decision made three
+revisions ago. The author chose the awkward third stack on purpose, against the
+agent's recommendation, precisely so that a gap like this would show up while
+the project was four files big instead of forty.
