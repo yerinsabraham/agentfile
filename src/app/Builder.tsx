@@ -52,16 +52,36 @@ function downloadFile(filename: string, content: string) {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Splits the finished file into its sections so a change can be shown in
+ * place. A section starts at a heading and runs to the next one; the block
+ * above the first heading is the title and the project description.
+ *
+ * The key is the heading line, not the index, so a section appearing or
+ * disappearing does not make every section below it look changed.
+ */
+function toSections(file: string): { key: string; text: string }[] {
+  return file
+    .trimEnd()
+    .split(/\n(?=## )/)
+    .map((text, i) => ({
+      key: text.startsWith('## ') ? text.split('\n')[0] : `title-${i}`,
+      text,
+    }));
+}
+
 function FileBlock({
   filename,
   content,
   copied,
   onCopy,
+  children,
 }: {
   filename: string;
   content: string;
   copied: boolean;
   onCopy: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <div className={styles.fileBlock}>
@@ -80,7 +100,7 @@ function FileBlock({
           </button>
         </div>
       </div>
-      <pre className={styles.output}>{content}</pre>
+      <pre className={styles.output}>{children}</pre>
     </div>
   );
 }
@@ -111,6 +131,47 @@ export default function Builder({
     () => assemble(base, answers, name),
     [base, answers, name],
   );
+
+  const sections = useMemo(() => toSections(files.agents), [files.agents]);
+
+  /**
+   * The change highlight.
+   *
+   * Derived during render rather than in an effect. Setting state inside an
+   * effect here would schedule a second render after paint, which React 19
+   * flags as a cascading render, and it would also mean the tint arrived one
+   * frame late. Comparing against the previous value during render is the
+   * documented way to do this: React discards the first pass and re-renders
+   * immediately, before anything reaches the screen.
+   *
+   * A counter per section rather than a boolean, because bumping it changes
+   * the React key, which remounts that span and replays the animation. With a
+   * boolean, a section edited twice in a row would tint once and then sit
+   * still, since the class never changed.
+   */
+  const current = useMemo(
+    () => new Map(sections.map((s) => [s.key, s.text])),
+    [sections],
+  );
+  const [seen, setSeen] = useState<Map<string, string> | null>(null);
+  const [pulse, setPulse] = useState<Map<string, number>>(new Map());
+
+  if (seen === null) {
+    // First render. Seed it so the initial paint does not light up.
+    setSeen(current);
+  } else if (seen !== current) {
+    const next = new Map(pulse);
+    let changed = false;
+    for (const [key, text] of current) {
+      const before = seen.get(key);
+      if (before === undefined || before !== text) {
+        next.set(key, (next.get(key) ?? 0) + 1);
+        changed = true;
+      }
+    }
+    setSeen(current);
+    if (changed) setPulse(next);
+  }
 
   async function copy(filename: string, content: string) {
     try {
@@ -191,13 +252,29 @@ export default function Builder({
             content={files.agents}
             copied={copied === 'AGENTS.md'}
             onCopy={() => copy('AGENTS.md', files.agents)}
-          />
+          >
+            {sections.map((s, i) => (
+              <span
+                key={`${s.key}:${pulse.get(s.key) ?? 0}`}
+                className={`${styles.section} ${
+                  pulse.has(s.key) ? styles.changed : ''
+                }`}
+              >
+                {s.text}
+                {i < sections.length - 1 ? '\n' : '\n'}
+              </span>
+            ))}
+          </FileBlock>
+
           <FileBlock
             filename="CLAUDE.md"
             content={files.claude}
             copied={copied === 'CLAUDE.md'}
             onCopy={() => copy('CLAUDE.md', files.claude)}
-          />
+          >
+            {files.claude}
+          </FileBlock>
+
           {copied?.endsWith(':failed') && (
             <p className={styles.note}>
               Your browser refused clipboard access. Select the text and copy

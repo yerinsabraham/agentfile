@@ -1,4 +1,5 @@
-/* One screen. Form left, preview right. PROJECT.md §4. */
+/* One screen. Form left, preview right. PROJECT.md §4.
+   Tokens are Creovine Academy's, defined in globals.css. */
 
 .page {
   min-height: 100vh;
@@ -8,22 +9,27 @@
 
 .header {
   border-bottom: 1px solid var(--line);
-  padding: 20px 24px;
+  padding: 28px 24px 22px;
 }
 
+/* Instrument Serif, the one place it appears. A serif title against an
+   otherwise sans interface is the academy's signature, and it stops this
+   looking like the default of every generated app. */
 .wordmark {
-  font-family: var(--mono);
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin: 0 0 6px;
+  font-family: var(--serif);
+  font-size: 34px;
+  font-weight: 400;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0 0 8px;
 }
 
 .tagline {
   margin: 0;
   font-size: 15px;
-  color: var(--muted);
+  line-height: 1.55;
+  color: var(--secondary);
   max-width: 62ch;
 }
 
@@ -66,19 +72,6 @@
   gap: 12px;
 }
 
-.badge {
-  margin-left: 8px;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 1px 7px;
-  vertical-align: middle;
-}
-
 .paneLabel {
   font-family: var(--mono);
   font-size: 11px;
@@ -86,6 +79,19 @@
   text-transform: uppercase;
   color: var(--muted);
   margin: 0;
+}
+
+.badge {
+  margin-left: 8px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 1px 7px;
+  vertical-align: middle;
 }
 
 .field {
@@ -96,6 +102,7 @@
   display: block;
   font-size: 14px;
   font-weight: 500;
+  color: var(--ink);
   margin-bottom: 6px;
 }
 
@@ -113,11 +120,24 @@
   width: 100%;
   font: inherit;
   font-size: 15px;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--line);
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
   padding: 8px 10px;
+}
+
+.field input::placeholder,
+.field textarea::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.field input:focus-visible,
+.field textarea:focus-visible,
+.field select:focus-visible {
+  border-color: var(--accent);
+  outline-offset: 0;
 }
 
 .field textarea {
@@ -128,28 +148,59 @@
 .field input:disabled,
 .field textarea:disabled,
 .field select:disabled {
-  background: var(--panel);
+  background: var(--sunken);
   color: var(--muted);
   cursor: not-allowed;
 }
 
 .output {
-  background: var(--panel);
-  min-height: 0;
+  background: var(--sunken);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 16px 18px;
   font-family: var(--mono);
   font-size: 12.5px;
   line-height: 1.7;
+  color: var(--ink);
   white-space: pre-wrap;
   overflow-x: auto;
+  min-height: 0;
   margin: 0;
 }
 
+/* The change highlight.
+   This is the moment the product exists for: an answer changes and the file
+   changes with it. Without this the output updates and nothing tells your eye
+   where. A tint that fades, no movement, so it reads as "this part" rather
+   than as something demanding attention. */
+.section {
+  display: block;
+  border-radius: 3px;
+  margin: 0 -4px;
+  padding: 0 4px;
+  background-color: transparent;
+}
+
+.changed {
+  animation: tint 900ms ease-out;
+}
+
+@keyframes tint {
+  0% {
+    background-color: var(--accent-tint);
+  }
+  55% {
+    background-color: var(--accent-tint);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
 .note {
-  margin: 16px 0 0;
+  margin: 4px 0 0;
   font-size: 13px;
+  line-height: 1.55;
   color: var(--muted);
 }
 
@@ -176,9 +227,9 @@
 .action {
   font: inherit;
   font-size: 12px;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--line);
+  color: var(--secondary);
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
   border-radius: 6px;
   padding: 4px 10px;
   cursor: pointer;

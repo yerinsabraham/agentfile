@@ -1,26 +1,47 @@
 /* PROJECT.md §3: no Tailwind. It is not in the plan, and §6 forbids a
    dependency whose reason is not written down first. Plain CSS keeps
-   package.json readable, which is itself part of the teaching. */
+   package.json readable, which is itself part of the teaching.
+
+   Tokens are Creovine Academy's, matched exactly. This is on screen in
+   lesson 3 and beginners copy what they see, so it should look like the
+   academy rather than like every generated app. */
 
 :root {
-  --bg: #ffffff;
-  --panel: #f7f7f8;
-  --text: #18181b;
-  --muted: #71717a;
-  --line: #e4e4e7;
-  --accent: #1d4ed8;
+  --accent: #2e91a8;
+  --accent-tint: #e8f4f8;
+
+  --ink: #15171c;
+  --secondary: #52565f;
+  --muted: #767b85;
+
+  --ground: #fbfbfd;
+  --panel: #ffffff;
+  --sunken: #f2f4f7;
+
+  --line: #e5e7eb;
+  --line-strong: #d1d5db;
+
+  --serif: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --sans:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  --sans: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0b0b0d;
-    --panel: #151518;
-    --text: #f4f4f5;
-    --muted: #a1a1aa;
-    --line: #27272a;
-    --accent: #93b4ff;
+    --accent: #a5dcea;
+    --accent-tint: #1f3138;
+
+    --ink: #f3f5f7;
+    --secondary: #b3b9c2;
+    --muted: #8a919b;
+
+    --ground: #14161a;
+    --panel: #1b1e24;
+    --sunken: #1b1e24;
+
+    --line: #272b32;
+    --line-strong: #363b44;
   }
 }
 
@@ -35,8 +56,8 @@ body {
 }
 
 body {
-  background: var(--bg);
-  color: var(--text);
+  background: var(--ground);
+  color: var(--ink);
   font-family: var(--sans);
   font-size: 16px;
   line-height: 1.6;

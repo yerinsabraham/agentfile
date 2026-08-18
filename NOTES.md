@@ -758,3 +758,73 @@ nobody here has shipped are the best source of the next missing question.
   can be tested. The mechanism works and the instructions were followed once,
   by the agent that wrote them, which is the weakest possible confirmation.
   The first outside pull request is the real check.
+
+---
+
+## Design pass · Academy tokens and the change highlight
+
+**What was asked.** Match Creovine Academy's tokens exactly, Instrument Serif
+for the page title and Inter for everything else loaded by stylesheet link
+rather than an npm package, and one functional change: briefly highlight the
+part of the output that changed when an answer changes.
+
+**Why it mattered.** The app was running `#1d4ed8`, zinc greys and
+`system-ui`, which is the default look every generated app ships with. Lesson 3
+puts it on screen for three minutes and beginners copy what they see.
+
+**The dependency rule was followed first.** PROJECT.md §3 gained an [r5] row
+before any code changed, per §6. Two costs recorded there and accepted: the
+page now makes a request to a third party it did not make before, and a font
+that fails to load falls back rather than blocking. Neither touches the
+no-backend rule, since both are browser requests.
+
+### The change highlight is the important half
+
+The file updated on every keystroke and nothing told your eye where. That is
+the single moment the product exists for, and it was invisible.
+
+The finished file is split at its headings, each section keyed by its heading
+line rather than by index, so a section appearing or disappearing does not make
+everything below it look changed. A changed section gets a tint in the accent
+that fades over 900ms. No movement, per the brief.
+
+**Two things that were nearly wrong.**
+
+**A boolean would have tinted once and then stopped.** Editing the same section
+twice in a row leaves the class unchanged, so the animation never replays. The
+fix is a counter per section, used in the React key, so the span remounts and
+the animation restarts.
+
+**The first version set state inside an effect, and the linter refused it:**
+
+```
+error  Calling setState synchronously within an effect can trigger
+       cascading renders
+```
+
+That is not style advice. Setting state in an effect schedules a second render
+after paint, so the tint would have arrived a frame late, on the thing whose
+entire job is to feel immediate. Comparing against the previous value during
+render is the documented pattern: React discards the first pass and re-renders
+before anything reaches the screen.
+
+*Worth showing on camera:* yes. A lint error that reads like a code-style
+nitpick was actually describing a visible defect in the feature being built.
+
+### One false positive, suppressed with its reason
+
+`@next/next/no-page-custom-font` warns that a font added to one page loads only
+on that page. It is a Pages Router rule and this is the App Router root layout,
+which applies to every page, which is what the rule wants. Disabled on that
+line with the reason written above it, rather than switched off globally.
+
+### Verified
+
+```
+tokens in built CSS : all 13 present, #1d4ed8 gone
+fonts               : Instrument Serif and Inter linked, referenced in CSS
+animation           : keyframes present
+lint                : clean
+tests               : 11 pass
+build               : succeeds
+```
