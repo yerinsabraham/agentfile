@@ -1,15 +1,17 @@
 /**
- * Answers plus a template become the two output files. PROJECT.md §2 and §4.
+ * Answers plus templates become the two output files. PROJECT.md §2 and §4.
  *
  * This is a browser function. §2 [r2]: the app is prerendered and pure client
- * after that, so everything here works on strings already in memory. There is
- * no request-time code anywhere in this project.
+ * after that, so everything here works on strings already in memory. It never
+ * touches the filesystem and never imports the registry. Templates arrive as
+ * arguments, loaded at build time and passed down as props.
  *
- * Phase 2 keeps the stack hard coded, per §5. Phase 3 moves the template text
- * to markdown files on disk and imports it through templates/index.ts.
+ * Phase 3 moved the template text to disk. The section order and the wording
+ * of every heading now live in templates/base.md, so a contributor changes
+ * the output by editing markdown rather than by editing this file.
  */
 
-import { QUESTIONS, type Answers, type QuestionId } from './questions';
+import { QUESTION_IDS, type Answers, type QuestionId } from './questions';
 
 export interface Stack {
   id: string;
@@ -18,77 +20,84 @@ export interface Stack {
   prefill: Partial<Record<QuestionId, string>>;
 }
 
-/**
- * The one hard coded stack for phase 2. §5 phase 4 adds Python FastAPI and
- * Flutter, at which point this moves to templates/stacks/nextjs.md.
- */
-export const NEXTJS: Stack = {
-  id: 'nextjs',
-  name: 'Next.js',
-  prefill: {
-    what: 'Next.js App Router, TypeScript.',
-    commands: 'npm run dev\nnpm run lint\nnpm run build',
-    style:
-      'Sentence case for headings.\nNo abbreviations in identifiers.\nComments say why, not what.',
-  },
-};
-
-export const STACKS: readonly Stack[] = [NEXTJS];
-
 export interface OutputFiles {
   agents: string;
   claude: string;
 }
 
-/** Trim, drop trailing blank lines, and normalise line endings. */
+/** Trim, drop trailing blank lines, normalise line endings. */
 function clean(value: string): string {
   return value.replace(/\r\n/g, '\n').trim();
 }
 
 /**
- * A section with no answer is left out entirely rather than emitted as an
- * empty heading. A heading with nothing under it reads as an instruction the
- * agent could not find, which is worse than the section being absent.
+ * Pulls prefills out of a stack template. A stack file is plain markdown with
+ * one `## <question id>` section per prefilled answer. Anything else in the
+ * file, including the title and the notes to contributors, is ignored on
+ * purpose, so a contributor can write as much explanation as they like.
  */
-function section(heading: string, body: string): string | null {
-  const text = clean(body);
-  if (!text) return null;
-  return heading ? `## ${heading}\n\n${text}` : text;
+export function parseStackPrefills(
+  source: string,
+): Partial<Record<QuestionId, string>> {
+  const prefill: Partial<Record<QuestionId, string>> = {};
+  const known = QUESTION_IDS as readonly string[];
+
+  for (const section of source.split(/^## /m).slice(1)) {
+    const breakAt = section.indexOf('\n');
+    if (breakAt === -1) continue;
+    const key = section.slice(0, breakAt).trim();
+    const body = clean(section.slice(breakAt + 1));
+    if (known.includes(key) && body) prefill[key as QuestionId] = body;
+  }
+
+  return prefill;
 }
 
 /**
- * Takes no stack argument. The stack seeds the ANSWERS via prefillAnswers,
- * so by the time assembly runs there is nothing stack-specific left to know.
- * A parameter added for phase 3 would be speculative, and the linter was
- * right to say so.
+ * Marks a section for removal. A heading whose only content is an unanswered
+ * token is dropped along with its heading: a heading an agent cannot find
+ * content under reads as an instruction it failed to follow, which is worse
+ * than the section being absent.
+ *
+ * A literal sentinel rather than a control character, so the file stays
+ * readable and greppable.
  */
-export function assemble(answers: Answers, projectName: string): OutputFiles {
+const DROP = '<<<agentfile:drop-this-line>>>';
+
+export function assemble(
+  base: string,
+  answers: Answers,
+  projectName: string,
+): OutputFiles {
   const name = clean(projectName) || 'Your project';
 
-  const blocks = QUESTIONS.map((q) =>
-    section(q.heading, answers[q.id] ?? ''),
-  ).filter((block): block is string => block !== null);
+  // Sections first, so an empty one takes its heading with it.
+  let agents = base.replace(
+    /## (.+)\n+\{\{(\w+)\}\}/g,
+    (_match, heading: string, token: string) => {
+      const value = clean(answers[token as QuestionId] ?? '');
+      return value ? `## ${heading}\n\n${value}` : DROP;
+    },
+  );
 
-  const agents =
-    blocks.length > 0
-      ? `# ${name}\n\n${blocks.join('\n\n')}\n`
-      : `# ${name}\n\nAnswer the questions on the left and this file writes itself.\n`;
+  // Then the loose tokens that are not inside a section.
+  agents = agents.replace(/\{\{(\w+)\}\}/g, (_match, token: string) => {
+    if (token === 'name') return name;
+    return clean(answers[token as QuestionId] ?? '');
+  });
+
+  agents = agents
+    .split('\n')
+    .filter((line) => line.trim() !== DROP)
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 
   /**
    * §2 [r2]: two files, not one duplicated under two names. AGENTS.md holds
    * the content and CLAUDE.md points at it, so editing one cannot leave the
-   * other stale. The import syntax is what Claude Code actually reads.
+   * other stale. `@AGENTS.md` is the documented import syntax, not a
+   * stylistic choice: it is what the agent actually reads and acts on.
    */
-  const claude = `@AGENTS.md\n`;
-
-  return { agents, claude };
-}
-
-/** Used to seed the form when a stack is chosen. */
-export function prefillAnswers(stack: Stack, current: Answers): Answers {
-  const next = { ...current };
-  for (const [id, value] of Object.entries(stack.prefill)) {
-    if (!clean(next[id as QuestionId])) next[id as QuestionId] = value;
-  }
-  return next;
+  return { agents: `${agents}\n`, claude: '@AGENTS.md\n' };
 }

@@ -287,3 +287,126 @@ anything is clicked.
 **The lesson, in two parts.** "It does nothing" is a complete bug report and
 you should hand it over without apologising for not knowing more. And never
 trust "done" until you have clicked the thing yourself.
+
+---
+
+## Phase 3 · Registry
+
+**What was asked.** Templates to disk. `templates/index.ts` as the only
+registry with static typed imports. Then delete a template and show
+`npm run build` failing. The failure is the phase, not a side effect of it.
+
+**What was produced.** `templates/base.md` holds the skeleton and now owns the
+section order and every heading, so changing the shape of the output means
+editing markdown rather than TypeScript. `templates/stacks/nextjs.md` holds the
+prefills. `templates/index.ts` lists both. The page split in two: a Server
+Component that reads the registry at build time, and `Builder.tsx` holding the
+state and the live preview.
+
+### What was wrong
+
+**The plan's mechanism does not exist in this stack.** §3 [r2] says a missing
+template fails the build "via the import itself", using static imports of the
+markdown. That was tested rather than assumed, and it does not work:
+
+```
+import probe from '../../templates/_probe.md?raw';
+```
+
+```
+Error: Turbopack build failed with 1 error:
+Error: Unknown module type
+```
+
+Next.js cannot import a `.md` file as a string without a loader, and the loader
+is a new dependency. §6 forbids adding one without the reason going into
+PROJECT.md first, so the agent stopped and said so instead of installing
+`raw-loader` and carrying on.
+
+**What was done instead.** `templates/index.ts` reads the files with
+`readFileSync` at module scope, using static string literal paths. The module
+is imported by a Server Component, which under `output: 'export'` runs once
+during the build and never again, so no request-time code is introduced and the
+no-backend rule holds.
+
+**What changed and what did not.** The guarantee is the same: delete a listed
+template and the build fails, loudly, naming the file. There is still no check
+script to remember to run, which was the actual point of §3. What changed is
+*when* it fails: during prerender rather than at compile. That is a real
+difference in the plan's words and worth a decision, so it is flagged rather
+than buried.
+
+*Worth showing on camera:* yes, and it is the best moment in this phase. The
+plan specified a mechanism, the mechanism turned out not to exist, and the
+agent tested it, reported it, refused to install its way around a rule, and
+proposed an alternative that keeps the guarantee. That is the behaviour the
+rules in §6 exist to produce.
+
+### The failure, exactly as it appears
+
+`templates/stacks/nextjs.md` was deleted while still listed in the registry.
+`npm run build`:
+
+```
+✓ Compiled successfully in 165ms
+  Running TypeScript ...
+  Finished TypeScript in 1645ms ...
+  Collecting page data using 5 workers ...
+Error: Failed to collect configuration for /
+    at ignore-listed frames {
+  [cause]: Error: Template missing: templates/stacks/nextjs.md
+  It is listed in templates/index.ts but is not on disk. Either restore the file or remove its entry from the registry.
+      at f (templates/index.ts:35:11)
+      at module evaluation (templates/index.ts:60:44)
+      at module evaluation (src/app/page.tsx:40:1)
+    33 |     return readFileSync(path, 'utf8');
+    34 |   } catch {
+  > 35 |     throw new Error(
+       |           ^
+    36 |       `Template missing: templates/${segments.join('/')}\n` +
+
+> Build error occurred
+Error: Failed to collect page data for /
+```
+
+Three things worth pointing at in that output. It names the missing file. It
+says where the file is listed. It gives both valid fixes, restore it or remove
+the entry, so a contributor who deletes a stack by accident is not left
+guessing. The file was restored and the build passes again.
+
+### One thing verified rather than trusted
+
+The prerendered HTML contains the string `## Never`, which looked at first like
+an empty section being emitted with its heading, the exact bug the assembly is
+supposed to prevent. It is not. The raw `base.md` travels to the browser as a
+prop, so the unprocessed template with its `{{never}}` tokens appears in the
+payload alongside the finished output.
+
+Confirmed by running the assembly directly against the real files on disk:
+
+```
+--- prefills parsed: what, commands, style
+--- assembled output ---
+# Orchard
+
+Next.js App Router, TypeScript.
+
+## Commands
+
+npm run dev
+npm run lint
+npm run build
+
+## Style
+
+Sentence case for headings.
+No abbreviations in identifiers.
+Comments say why, not what.
+```
+
+Four unanswered sections gone, each taking its heading with it. Prefills are
+exactly questions 1, 4 and 7, as §2 says.
+
+*Worth showing on camera:* yes, briefly. A grep on built output is a weak test,
+and it produced a false alarm that took a real check to clear. Test the function,
+not the HTML.
